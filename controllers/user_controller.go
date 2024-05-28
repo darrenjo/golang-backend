@@ -5,6 +5,7 @@ import (
 	"backend-api/helpers"
 	"backend-api/models"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -46,19 +47,26 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Login attempt with email: %s", user.Email)
+
 	storedUser, err := models.GetUserByEmail(user.Email)
 	if err != nil {
+		log.Printf("Error retrieving user by email: %v", err)
 		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
+	log.Printf("Stored user: %v", storedUser)
+
 	if !helpers.CheckPasswordHash(user.Password, storedUser.Password) {
+		log.Printf("Password mismatch for user: %s", user.Email)
 		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
 	token, err := helpers.GenerateJWT(storedUser.ID)
 	if err != nil {
+		log.Printf("Error generating token: %v", err)
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error generating token")
 		return
 	}

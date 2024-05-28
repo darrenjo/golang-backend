@@ -25,6 +25,8 @@ func NewRouter() *mux.Router {
 	api.HandleFunc("/photos", controllers.CreatePhoto).Methods("POST")
 	api.HandleFunc("/photos/{photoId}", controllers.UpdatePhoto).Methods("PUT")
 	api.HandleFunc("/photos/{photoId}", controllers.DeletePhoto).Methods("DELETE")
+	api.HandleFunc("/photos/profile", controllers.SetProfilePhoto).Methods("POST")
+	api.HandleFunc("/photos/profile", controllers.GetProfilePhoto).Methods("GET")
 
 	return r
 }

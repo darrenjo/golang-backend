@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -50,12 +50,12 @@ func GenerateJWT(userID uint) (string, error) {
 	return tokenString, nil
 }
 
-// ValidateJWT validates a JWT token
+// ValidateJWT validates the JWT token
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(secret), nil
 	})

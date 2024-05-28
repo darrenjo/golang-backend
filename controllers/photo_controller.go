@@ -6,12 +6,12 @@ import (
 	"backend-api/models"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
-// CreatePhoto handles the creation of a new photo
 func CreatePhoto(w http.ResponseWriter, r *http.Request) {
 	var photo app.Photo
 	if err := json.NewDecoder(r.Body).Decode(&photo); err != nil {
@@ -32,7 +32,6 @@ func CreatePhoto(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithJSON(w, http.StatusCreated, photo)
 }
 
-// GetPhotos handles fetching all photos
 func GetPhotos(w http.ResponseWriter, r *http.Request) {
 	photos, err := models.GetAllPhotos()
 	if err != nil {
@@ -42,32 +41,34 @@ func GetPhotos(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithJSON(w, http.StatusOK, photos)
 }
 
-// UpdatePhoto handles updating a photo
 func UpdatePhoto(w http.ResponseWriter, r *http.Request) {
-	var photo app.Photo
 	params := mux.Vars(r)
-	photoID := params["photoId"]
+	photoID, err := strconv.Atoi(params["photoId"])
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid photo ID")
+		return
+	}
 
+	var photo app.Photo
 	if err := json.NewDecoder(r.Body).Decode(&photo); err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	userID := r.Context().Value("userID").(uint)
-	storedPhoto, err := models.GetPhotoByID(photoID)
+	existingPhoto, err := models.GetPhotoByID(uint(photoID))
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found")
 		return
 	}
 
-	if storedPhoto.UserID != userID {
-		helpers.RespondWithError(w, http.StatusForbidden, "You are not authorized to update this photo")
+	if existingPhoto.UserID != userID {
+		helpers.RespondWithError(w, http.StatusForbidden, "You are not allowed to update this photo")
 		return
 	}
 
-	photo.ID = storedPhoto.ID
-	photo.UserID = storedPhoto.UserID
-	photo.CreatedAt = storedPhoto.CreatedAt
+	photo.ID = uint(photoID)
+	photo.UserID = userID
 	photo.UpdatedAt = time.Now()
 
 	if err := models.UpdatePhoto(&photo); err != nil {
@@ -78,27 +79,76 @@ func UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithJSON(w, http.StatusOK, photo)
 }
 
-// DeletePhoto handles deleting a photo
 func DeletePhoto(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	photoID := params["photoId"]
+	photoID, err := strconv.Atoi(params["photoId"])
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid photo ID")
+		return
+	}
 
 	userID := r.Context().Value("userID").(uint)
-	storedPhoto, err := models.GetPhotoByID(photoID)
+	existingPhoto, err := models.GetPhotoByID(uint(photoID))
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found")
 		return
 	}
 
-	if storedPhoto.UserID != userID {
-		helpers.RespondWithError(w, http.StatusForbidden, "You are not authorized to delete this photo")
+	if existingPhoto.UserID != userID {
+		helpers.RespondWithError(w, http.StatusForbidden, "You are not allowed to delete this photo")
 		return
 	}
 
-	if err := models.DeletePhoto(photoID); err != nil {
+	if err := models.DeletePhoto(uint(photoID)); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error deleting photo")
 		return
 	}
 
 	helpers.RespondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+}
+
+func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	photoID, err := strconv.Atoi(params["photoId"])
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid photo ID")
+		return
+	}
+
+	userID := r.Context().Value("userID").(uint)
+	existingPhoto, err := models.GetPhotoByID(uint(photoID))
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found")
+		return
+	}
+
+	if existingPhoto.UserID != userID {
+		helpers.RespondWithError(w, http.StatusForbidden, "You are not allowed to set this photo as profile")
+		return
+	}
+
+	if err := models.UnsetUserProfilePhotos(userID); err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Error unsetting profile photos")
+		return
+	}
+
+	existingPhoto.IsProfile = true
+	existingPhoto.UpdatedAt = time.Now()
+
+	if err := models.UpdatePhoto(&existingPhoto); err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Error setting profile photo")
+		return
+	}
+
+	helpers.RespondWithJSON(w, http.StatusOK, existingPhoto)
+}
+
+func GetProfilePhoto(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(uint)
+	photos, err := models.GetUserProfilePhotos(userID)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Error fetching profile photos")
+		return
+	}
+	helpers.RespondWithJSON(w, http.StatusOK, photos)
 }
