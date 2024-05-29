@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -37,16 +38,26 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 // GenerateJWT generates a JWT token for a user
+// GenerateJWT generates a JWT token for a user
 func GenerateJWT(userID uint) (string, error) {
+	// Get JWT secret from environment variable
 	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT_SECRET environment variable is not set")
+	}
+
+	// Create a new JWT token with user ID as a claim
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
+
+	// Sign the token with the secret key
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error generating JWT token: %v", err)
 	}
+
 	return tokenString, nil
 }
 

@@ -8,8 +8,16 @@ import (
 
 func CreateUser(user *app.User) error {
 	query := `INSERT INTO users (username, password, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
-	_, err := database.DB.Exec(query, user.Username, user.Password, user.Email, user.CreatedAt, user.UpdatedAt)
-	return err
+	result, err := database.DB.Exec(query, user.Username, user.Password, user.Email, user.CreatedAt, user.UpdatedAt)
+	if err != nil {
+		return err
+	}
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	user.ID = uint(lastInsertID)
+	return nil
 }
 
 func GetUserByEmail(email string) (app.User, error) {
