@@ -9,6 +9,10 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+type contextKey string
+
+const UserContextKey contextKey = "userID"
+
 func JWTAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString := r.Header.Get("Authorization")
@@ -33,7 +37,7 @@ func JWTAuth(next http.Handler) http.Handler {
 
 		userID := uint(claims["user_id"].(float64))
 
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx := context.WithValue(r.Context(), UserContextKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

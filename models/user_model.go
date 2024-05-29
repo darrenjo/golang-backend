@@ -14,14 +14,15 @@ func CreateUser(user *app.User) error {
 
 func GetUserByEmail(email string) (app.User, error) {
 	var user app.User
-	var createdAt, updatedAt string
+	var createdAt time.Time
+	var updatedAt time.Time
 	query := `SELECT id, username, email, password, created_at, updated_at FROM users WHERE email = ?`
 	err := database.DB.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.Password, &createdAt, &updatedAt)
 	if err != nil {
 		return user, err
 	}
-	user.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-	user.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+	user.CreatedAt = createdAt
+	user.UpdatedAt = updatedAt
 	return user, nil
 }
 
@@ -31,7 +32,7 @@ func UpdateUser(userID string, user *app.User) error {
 	return err
 }
 
-func DeleteUser(userID string) error {
+func DeleteUser(userID uint) error {
 	query := `DELETE FROM users WHERE id = ?`
 	_, err := database.DB.Exec(query, userID)
 	return err

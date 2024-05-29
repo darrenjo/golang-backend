@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -59,4 +60,11 @@ func ValidateJWT(tokenString string) (*jwt.Token, error) {
 		}
 		return []byte(secret), nil
 	})
+}
+
+func ToNullTime(t time.Time) sql.NullTime {
+	return sql.NullTime{
+		Time:  t,
+		Valid: true,
+	}
 }

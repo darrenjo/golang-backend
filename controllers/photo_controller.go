@@ -21,8 +21,8 @@ func CreatePhoto(w http.ResponseWriter, r *http.Request) {
 
 	userID := r.Context().Value("userID").(uint)
 	photo.UserID = userID
-	photo.CreatedAt = time.Now()
-	photo.UpdatedAt = time.Now()
+	photo.CreatedAt = helpers.ToNullTime(time.Now())
+	photo.UpdatedAt = helpers.ToNullTime(time.Now())
 
 	if err := models.CreatePhoto(&photo); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error saving photo")
@@ -69,7 +69,7 @@ func UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 
 	photo.ID = uint(photoID)
 	photo.UserID = userID
-	photo.UpdatedAt = time.Now()
+	photo.UpdatedAt = helpers.ToNullTime(time.Now())
 
 	if err := models.UpdatePhoto(&photo); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error updating photo")
@@ -133,7 +133,7 @@ func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	existingPhoto.IsProfile = true
-	existingPhoto.UpdatedAt = time.Now()
+	existingPhoto.UpdatedAt = helpers.ToNullTime(time.Now())
 
 	if err := models.UpdatePhoto(&existingPhoto); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error setting profile photo")
