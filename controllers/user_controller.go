@@ -107,6 +107,9 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set the user ID to the ID from the URL
+	user.ID = ctxUserID
+
 	helpers.RespondWithJSON(w, http.StatusOK, user)
 }
 
