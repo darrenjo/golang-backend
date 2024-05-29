@@ -3,6 +3,7 @@ package models
 import (
 	"backend-api/app"
 	"backend-api/database"
+	"backend-api/helpers"
 	"time"
 )
 
@@ -34,7 +35,19 @@ func GetUserByEmail(email string) (app.User, error) {
 }
 
 func UpdateUser(userID string, user *app.User) error {
+	// Hash the password if it's provided
+	if user.Password != "" {
+		hashedPassword, err := helpers.HashPassword(user.Password)
+		if err != nil {
+			return err
+		}
+		user.Password = hashedPassword
+	}
+
+	// Prepare the SQL query
 	query := `UPDATE users SET username = ?, email = ?, password = ?, updated_at = ? WHERE id = ?`
+
+	// Execute the query
 	_, err := database.DB.Exec(query, user.Username, user.Email, user.Password, user.UpdatedAt, userID)
 	return err
 }

@@ -77,7 +77,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateUser handles updating user information
-// UpdateUser handles updating user information
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	var user app.User
 	params := mux.Vars(r)

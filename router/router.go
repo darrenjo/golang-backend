@@ -13,8 +13,12 @@ func NewRouter() *mux.Router {
 	// User routes
 	r.HandleFunc("/users/register", controllers.RegisterUser).Methods("POST")
 	r.HandleFunc("/users/login", controllers.LoginUser).Methods("POST")
-	r.HandleFunc("/users/{userId}", controllers.UpdateUser).Methods("PUT")
-	r.HandleFunc("/users/{userId}", controllers.DeleteUser).Methods("DELETE")
+
+	// Create a subrouter for protected user routes
+	userRouter := r.PathPrefix("/users").Subrouter()
+	userRouter.Use(middlewares.JWTAuth)
+	userRouter.HandleFunc("/{userId}", controllers.UpdateUser).Methods("PUT")
+	userRouter.HandleFunc("/{userId}", controllers.DeleteUser).Methods("DELETE")
 
 	// Public Photo routes
 	r.HandleFunc("/photos", controllers.GetPhotos).Methods("GET")
