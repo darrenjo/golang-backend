@@ -3,152 +3,92 @@ package controllers
 import (
 	"backend-api/app"
 	"backend-api/helpers"
+	"backend-api/middlewares"
 	"backend-api/models"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 )
 
-func CreatePhoto(w http.ResponseWriter, r *http.Request) {
+// SetProfilePhoto sets a photo as the user's profile photo.
+func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
 	var photo app.Photo
 	if err := json.NewDecoder(r.Body).Decode(&photo); err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	userID := r.Context().Value("userID").(uint)
-	photo.UserID = userID
-	photo.CreatedAt = time.Now()
-	photo.UpdatedAt = time.Now()
+	userID, ok := middlewares.GetUserContextKey(r)
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
+		return
+	}
 
+	// Retrieve the existing profile photos of the user
+	existingProfilePhotos, err := models.GetUserProfilePhotos(userID)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Error fetching profile photos")
+		return
+	}
+
+	// If the user already has a profile photo, delete it
+	if len(existingProfilePhotos) > 0 {
+		if err := models.DeletePhoto(existingProfilePhotos[0].ID, userID); err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, "Error deleting existing profile photo")
+			return
+		}
+	}
+
+	// Set the new photo as the profile photo
+	photo.IsProfile = true
+	photo.UserID = userID
 	if err := models.CreatePhoto(&photo); err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Error saving photo")
-		return
-	}
-
-	helpers.RespondWithJSON(w, http.StatusCreated, photo)
-}
-
-func GetPhotos(w http.ResponseWriter, r *http.Request) {
-	photos, err := models.GetAllPhotos()
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Error fetching photos")
-		return
-	}
-	helpers.RespondWithJSON(w, http.StatusOK, photos)
-}
-
-func UpdatePhoto(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	photoID, err := strconv.Atoi(params["photoId"])
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid photo ID")
-		return
-	}
-
-	var photo app.Photo
-	if err := json.NewDecoder(r.Body).Decode(&photo); err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	userID := r.Context().Value("userID").(uint)
-	existingPhoto, err := models.GetPhotoByID(uint(photoID))
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found")
-		return
-	}
-
-	if existingPhoto.UserID != userID {
-		helpers.RespondWithError(w, http.StatusForbidden, "You are not allowed to update this photo")
-		return
-	}
-
-	photo.ID = uint(photoID)
-	photo.UserID = userID
-	photo.UpdatedAt = time.Now()
-
-	if err := models.UpdatePhoto(&photo); err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Error updating photo")
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Error setting profile photo")
 		return
 	}
 
 	helpers.RespondWithJSON(w, http.StatusOK, photo)
 }
 
+// GetProfilePhoto retrieves the profile photo URL of the user.
+func GetProfilePhoto(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewares.GetUserContextKey(r)
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
+		return
+	}
+
+	photoURL, err := models.GetUserProfilePhoto(userID)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Error fetching profile photo")
+		return
+	}
+
+	helpers.RespondWithJSON(w, http.StatusOK, map[string]string{"photo_url": photoURL})
+}
+
+// DeletePhoto menangani penghapusan foto.
 func DeletePhoto(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	photoID, err := strconv.Atoi(params["photoId"])
+	photoID, err := strconv.ParseUint(params["photoId"], 10, 64)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid photo ID")
 		return
 	}
 
-	userID := r.Context().Value("userID").(uint)
-	existingPhoto, err := models.GetPhotoByID(uint(photoID))
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found")
+	userID, ok := middlewares.GetUserContextKey(r)
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
 		return
 	}
 
-	if existingPhoto.UserID != userID {
-		helpers.RespondWithError(w, http.StatusForbidden, "You are not allowed to delete this photo")
-		return
-	}
-
-	if err := models.DeletePhoto(uint(photoID)); err != nil {
+	// Hapus foto dengan ID tertentu untuk pengguna tertentu
+	if err := models.DeletePhoto(uint(photoID), userID); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error deleting photo")
 		return
 	}
 
 	helpers.RespondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
-}
-
-func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	photoID, err := strconv.Atoi(params["photoId"])
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid photo ID")
-		return
-	}
-
-	userID := r.Context().Value("userID").(uint)
-	existingPhoto, err := models.GetPhotoByID(uint(photoID))
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found")
-		return
-	}
-
-	if existingPhoto.UserID != userID {
-		helpers.RespondWithError(w, http.StatusForbidden, "You are not allowed to set this photo as profile")
-		return
-	}
-
-	if err := models.UnsetUserProfilePhotos(userID); err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Error unsetting profile photos")
-		return
-	}
-
-	existingPhoto.IsProfile = true
-	existingPhoto.UpdatedAt = time.Now()
-
-	if err := models.UpdatePhoto(&existingPhoto); err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Error setting profile photo")
-		return
-	}
-
-	helpers.RespondWithJSON(w, http.StatusOK, existingPhoto)
-}
-
-func GetProfilePhoto(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(uint)
-	photos, err := models.GetUserProfilePhotos(userID)
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Error fetching profile photos")
-		return
-	}
-	helpers.RespondWithJSON(w, http.StatusOK, photos)
 }
