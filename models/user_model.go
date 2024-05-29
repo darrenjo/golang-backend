@@ -3,13 +3,22 @@ package models
 import (
 	"backend-api/app"
 	"backend-api/database"
+	"backend-api/helpers"
 	"time"
 )
 
 func CreateUser(user *app.User) error {
 	query := `INSERT INTO users (username, password, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
-	_, err := database.DB.Exec(query, user.Username, user.Password, user.Email, user.CreatedAt, user.UpdatedAt)
-	return err
+	result, err := database.DB.Exec(query, user.Username, user.Password, user.Email, user.CreatedAt, user.UpdatedAt)
+	if err != nil {
+		return err
+	}
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	user.ID = uint(lastInsertID)
+	return nil
 }
 
 func GetUserByEmail(email string) (app.User, error) {
@@ -26,7 +35,19 @@ func GetUserByEmail(email string) (app.User, error) {
 }
 
 func UpdateUser(userID string, user *app.User) error {
+	// Hash the password if it's provided
+	if user.Password != "" {
+		hashedPassword, err := helpers.HashPassword(user.Password)
+		if err != nil {
+			return err
+		}
+		user.Password = hashedPassword
+	}
+
+	// Prepare the SQL query
 	query := `UPDATE users SET username = ?, email = ?, password = ?, updated_at = ? WHERE id = ?`
+
+	// Execute the query
 	_, err := database.DB.Exec(query, user.Username, user.Email, user.Password, user.UpdatedAt, userID)
 	return err
 }

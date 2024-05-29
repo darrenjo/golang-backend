@@ -3,10 +3,12 @@ package controllers
 import (
 	"backend-api/app"
 	"backend-api/helpers"
+	"backend-api/middlewares"
 	"backend-api/models"
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -80,6 +82,19 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userID := params["userId"]
 
+	// Retrieve user ID from request context
+	ctxUserID, ok := middlewares.GetUserContextKey(r)
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
+		return
+	}
+
+	// Check if the requested user ID matches the user ID from the token
+	if strconv.Itoa(int(ctxUserID)) != userID {
+		helpers.RespondWithError(w, http.StatusForbidden, "You can only update your own account")
+		return
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -92,6 +107,9 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set the user ID to the ID from the URL
+	user.ID = ctxUserID
+
 	helpers.RespondWithJSON(w, http.StatusOK, user)
 }
 
@@ -99,6 +117,19 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userID := params["userId"]
+
+	// Retrieve user ID from request context
+	ctxUserID, ok := middlewares.GetUserContextKey(r)
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
+		return
+	}
+
+	// Check if the requested user ID matches the user ID from the token
+	if strconv.Itoa(int(ctxUserID)) != userID {
+		helpers.RespondWithError(w, http.StatusForbidden, "You can only delete your own account")
+		return
+	}
 
 	if err := models.DeleteUser(userID); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error deleting user")
