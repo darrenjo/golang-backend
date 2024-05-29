@@ -15,6 +15,7 @@ type key int
 
 const userContextKey key = 0
 
+// JWTAuth middleware validates JWT tokens and extracts user ID from claims
 func JWTAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString := r.Header.Get("Authorization")
@@ -38,31 +39,26 @@ func JWTAuth(next http.Handler) http.Handler {
 
 		// Extract user ID from claims
 		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || !token.Valid {
+		if !ok {
 			log.Println("Invalid token claims")
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
 			return
 		}
 
-		// Check if user_id claim exists and is valid
-		userIDClaim, ok := claims["user_id"]
+		// Convert user ID claim to uint
+		userIDFloat, ok := claims["user_id"].(float64)
 		if !ok {
-			log.Println("user_id claim is missing")
+			log.Println("Invalid user_id type in token claims")
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
 			return
 		}
 
-		userID, ok := userIDClaim.(float64)
-		if !ok {
-			log.Printf("Invalid user_id type: %v", userIDClaim)
-			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
-			return
-		}
+		userID := uint(userIDFloat)
 
-		log.Printf("User ID from token: %f", userID)
+		log.Printf("User ID from token: %d", userID)
 
 		// Add user ID to request context
-		ctx := context.WithValue(r.Context(), userContextKey, uint(userID))
+		ctx := context.WithValue(r.Context(), userContextKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

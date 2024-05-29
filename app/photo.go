@@ -2,10 +2,9 @@ package app
 
 import "time"
 
+// Photo represents a user's photo in the system
 type Photo struct {
 	ID        uint      `json:"id"`
-	Title     string    `json:"title" binding:"required"`
-	Caption   string    `json:"caption"`
 	PhotoURL  string    `json:"photo_url" binding:"required"`
 	UserID    uint      `json:"user_id"`
 	IsProfile bool      `json:"is_profile"`
