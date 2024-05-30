@@ -30,19 +30,27 @@ func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("User ID from context: %d", userID)
 
-	// Retrieve the existing profile photos of the user
+	// Retrieve the existing profile photo of the user
 	existingProfilePhotos, err := models.GetUserProfilePhotos(userID)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error fetching profile photos")
 		return
 	}
 
-	// If the user already has a profile photo, delete it
 	if len(existingProfilePhotos) > 0 {
-		if err := models.DeletePhoto(existingProfilePhotos[0].ID, userID); err != nil {
-			helpers.RespondWithError(w, http.StatusInternalServerError, "Error deleting existing profile photo")
+		// Update the existing profile photo without changing created_at
+		existingPhoto := existingProfilePhotos[0]
+		existingPhoto.PhotoURL = photo.PhotoURL
+		existingPhoto.IsProfile = true
+		existingPhoto.UpdatedAt = time.Now()
+
+		if err := models.UpdatePhoto(&existingPhoto); err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, "Error updating profile photo")
 			return
 		}
+
+		helpers.RespondWithJSON(w, http.StatusOK, existingPhoto)
+		return
 	}
 
 	// Set the new photo as the profile photo
