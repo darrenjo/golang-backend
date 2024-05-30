@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -44,6 +45,8 @@ func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
 	// Set the new photo as the profile photo
 	photo.IsProfile = true
 	photo.UserID = userID
+	photo.CreatedAt = time.Now()
+	photo.UpdatedAt = time.Now()
 	if err := models.CreatePhoto(&photo); err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "Error setting profile photo")
 		return
