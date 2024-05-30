@@ -3,8 +3,10 @@ package middlewares
 import (
 	"backend-api/helpers"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
@@ -30,7 +32,14 @@ func JWTAuth(next http.Handler) http.Handler {
 		log.Printf("Token after trimming prefix: %s", tokenString)
 
 		// Validate JWT token
-		token, err := helpers.ValidateJWT(tokenString)
+		secret := os.Getenv("JWT_SECRET")
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(secret), nil
+		})
+
 		if err != nil || !token.Valid {
 			log.Printf("Token validation error: %v", err)
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
