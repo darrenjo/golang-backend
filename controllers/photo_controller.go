@@ -6,6 +6,7 @@ import (
 	"backend-api/middlewares"
 	"backend-api/models"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,6 +27,8 @@ func SetProfilePhoto(w http.ResponseWriter, r *http.Request) {
 		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
 		return
 	}
+
+	log.Printf("User ID from context: %d", userID)
 
 	// Retrieve the existing profile photos of the user
 	existingProfilePhotos, err := models.GetUserProfilePhotos(userID)
@@ -84,6 +87,20 @@ func DeletePhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middlewares.GetUserContextKey(r)
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
+		return
+	}
+
+	// Mengambil informasi foto dari database
+	foundPhoto, err := models.GetPhotoByID(uint(photoID), userID)
+	if err != nil {
+		// Jika foto tidak ditemukan atau pengguna tidak memiliki hak akses, kirim pesan kesalahan
+		helpers.RespondWithError(w, http.StatusNotFound, "Photo not found or user does not have access")
+		return
+	}
+
+	// Hapus foto hanya jika pengguna memiliki akses ke foto tersebut
+	if foundPhoto.UserID != userID {
+		helpers.RespondWithError(w, http.StatusForbidden, "You do not have permission to delete this photo")
 		return
 	}
 
