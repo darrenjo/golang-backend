@@ -60,21 +60,21 @@ This is a backend API project using Golang for managing user profiles and photos
   - URL: `/users/register`
   - Method: `POST`
   - Body:
-    ```
+    ```json
     {
-    "username": "testuser",
-    "email": "testuser@example.com",
-    "password": "password123"
+      "username": "testuser",
+      "email": "testuser@example.com",
+      "password": "password123"
     }
     ```
 - Login:
   - URL: `/users/login`
   - Method: `POST`
   - Body:
-    ```
+    ```json
     {
-    "email": "testuser@example.com",
-    "password": "password123"
+      "email": "testuser@example.com",
+      "password": "password123"
     }
     ```
 
@@ -85,9 +85,9 @@ This is a backend API project using Golang for managing user profiles and photos
   - Method: `POST`
   - Headers: `Authorization: Bearer <token>`
   - Body:
-    ```
+    ```json
     {
-    "photo_url": "http://example.com/photo.jpg"
+      "photo_url": "http://example.com/photo.jpg"
     }
     ```
 - Get Profile Photo:
@@ -202,8 +202,6 @@ PORT=3000
     }
     ```
 
----
-
 - Login
 
   **Endpoint:** `POST` `/users/login`
@@ -249,6 +247,8 @@ PORT=3000
       "error": "Invalid email or password"
     }
     ```
+
+---
 
 ### Photo Endpoints
 
@@ -316,8 +316,6 @@ PORT=3000
     }
     ```
 
----
-
 - Retrieve Profile Photo
 
   **Endpoint:** `GET` `/api/photos/profile`
@@ -338,15 +336,13 @@ PORT=3000
     - Response:
       ```json
       {
-        "photo_url": "http://example.com/testuser.jpg"
+        "photo_url": "http://example.com/testuser99999999.jpg"
       }
       ```
 
----
-
 - Delete Profile Photo
 
-  **Endpoint:** `DELETE` `/api/photos/profile`
+  **Endpoint:** `DELETE` `/api/photos/{photoId}`
 
   **Description:** Test profile photo deletion functionality.
 
